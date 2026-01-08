@@ -9,7 +9,7 @@ import (
 )
 
 var secret string = os.Getenv("SECRET_KEY")
-var secretKey = []byte(secret) // Change this! Keep it secret.
+var secretKey = []byte(secret)
 
 type Claims struct {
     UserID uint `json:"user_id"`
@@ -20,7 +20,7 @@ func GenerateToken(userID uint) (string, error) {
     claims := Claims{
         UserID: userID,
         RegisteredClaims: jwt.RegisteredClaims{
-            ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
+            ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)), // 15 minutes time limit
             IssuedAt:  jwt.NewNumericDate(time.Now()),
             Issuer:    "my-backend",
         },
@@ -51,18 +51,3 @@ func VerifyToken(tokenString string) (*Claims, error) {
 
     return claims, nil
 }
-
-// func main() {
-//     token, err := GenerateToken(123)
-//     if err != nil {
-//         panic(err)
-//     }
-//     fmt.Println("Token:", token)
-
-//     claims, err := VerifyToken(token)
-//     if err != nil {
-//         fmt.Println("Invalid:", err)
-//     } else {
-//         fmt.Printf("Valid! UserID: %d\n", claims.UserID)
-//     }
-// }

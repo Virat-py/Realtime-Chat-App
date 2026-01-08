@@ -1,9 +1,9 @@
 package db
 
 import (
+	"backend/internal/model"
 	"database/sql"
 	"log"
-	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -20,14 +20,14 @@ func ConnectMsgDB() *sql.DB {
 	return db
 }
 
-func CreateMsgTable(db *sql.DB) (error) {
+func CreateMsgTable(db *sql.DB) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS messages (
-			id INTEGER PRIMARY KEY AUTO INCREMENT,
-			user_id TEXT NOT NULL,
-			room_id INT NOT NULL,
-			message TEXT NOT NULL,
-			time TEXT NOT NULL
+			ID INTEGER PRIMARY KEY AUTO INCREMENT,
+			UserID TEXT NOT NULL,
+			RoomID INT NOT NULL,
+			Message TEXT NOT NULL,
+			Time TEXT NOT NULL
 		);
 		`
 	_, err := db.Exec(query)
@@ -37,16 +37,40 @@ func CreateMsgTable(db *sql.DB) (error) {
 	return nil
 }
 
-func AddMsg(db *sql.DB, user_id string,room_id int, message string) (error) {
-	
-	query := "INSERT INTO messages (user_id,room_id,message,time) VALUES (?,?,?,?)"
-	curr_time:=time.Now().Format(time.DateTime)
-	
-	_, err := db.Exec(query, user_id,room_id, message,curr_time)
+func AddMsg(db *sql.DB, msg model.Message) error {
+
+	query := "INSERT INTO messages (UserID,RoomID,Message,Time) VALUES (?,?,?,?)"
+
+	_, err := db.Exec(query, msg.UserID, msg.RoomID, msg.Message, msg.Time)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-
+func GetMsg(db *sql.DB, RoomID int) ([]model.Message,error){
+	query:="SELECT UserID,RoomID,Message,Time FROM messages WHERE RoomID=? ORDER BY ID DESC"
+	
+	rows,err:=db.Query(query,RoomID)
+	if err!=nil{
+		return nil,err
+	}
+	
+	defer rows.Close() 
+	
+	var messages []model.Message
+	
+	for rows.Next(){
+		var msg model.Message
+		err:=rows.Scan(&msg.UserID,&msg.RoomID,&msg.Message,&msg.Time)
+		if err!=nil{
+			return nil,err
+		}
+		messages=append(messages,msg)
+	}
+	
+	if err:=rows.Err();err!=nil{
+		return nil,err
+	}
+	return messages,nil
+}
