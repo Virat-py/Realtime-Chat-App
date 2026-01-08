@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -21,6 +23,8 @@ var (
 )
 
 func main() {
+	curr_time:=time.Now().Format(time.DateTime)
+	fmt.Println(curr_time)
 	http.HandleFunc("/ws", handleConnections)
 	go handleBroadcast()
 
@@ -42,7 +46,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	clients[client] = true
 
 	go client.write()
-	client.read()
+	go client.read()
 }
 
 func (c *Client) read() {
