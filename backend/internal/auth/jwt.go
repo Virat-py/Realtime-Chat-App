@@ -12,11 +12,11 @@ var secret string = os.Getenv("SECRET_KEY")
 var secretKey = []byte(secret)
 
 type Claims struct {
-    UserID uint `json:"user_id"`
+    UserID string `json:"user_id"`
     jwt.RegisteredClaims
 }
 
-func GenerateToken(userID uint) (string, error) {
+func GenerateToken(userID string) (string, error) {
     claims := Claims{
         UserID: userID,
         RegisteredClaims: jwt.RegisteredClaims{
