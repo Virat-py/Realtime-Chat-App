@@ -2,27 +2,26 @@ package db
 
 import (
 	"database/sql"
-	"log"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func ConnectUserDB() *sql.DB {
+func ConnectUserDB() (*sql.DB,error) {
 	db, err := sql.Open("sqlite3", "./app.db")
 	if err != nil {
-		log.Fatal(err)
+		return nil,err
 	}
 
 	if err := db.Ping(); err != nil {
-		log.Fatal(err)
+		return nil,err
 	}
-	return db
+	return db,nil
 }
 
 func CreateUserTable(db *sql.DB) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS users (
-			UserID INTEGER PRIMARY KEY,
+			UserID TEXT PRIMARY KEY,
 			PasswordHash TEXT NOT NULL
 		);
 		`

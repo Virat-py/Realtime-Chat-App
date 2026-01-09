@@ -7,6 +7,7 @@ import (
 
 func HashPassword(password string) (string, error) {
     // Cost: 12-14 is common (higher = slower/more secure). DefaultCost is 10.
+    // Creates a diff hash for a given password each time
     bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
     return string(bytes), err
 }

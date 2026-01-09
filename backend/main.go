@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
+	"backend/internal/db"
+	"backend/internal/handlers"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -23,12 +23,26 @@ var (
 )
 
 func main() {
-	curr_time:=time.Now().Format(time.DateTime)
-	fmt.Println(curr_time)
-	http.HandleFunc("/ws", handleConnections)
-	go handleBroadcast()
+	database, err := db.ConnectUserDB()
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
-	log.Println("Server running on :8080")
+	if err := db.CreateUserTable(database); err != nil {
+		log.Fatal("failed to create users table:", err)
+	}
+
+	defer database.Close()
+
+	h := &handlers.Handler{
+		DB: database,
+	}
+
+	http.HandleFunc("/register", h.RegisterUser)
+	http.HandleFunc("/login", h.LoginUser)
+
+	log.Println("Server running on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -64,7 +78,7 @@ func (c *Client) read() {
 	}
 }
 func (c *Client) write() {
-	
+
 	defer c.conn.Close()
 
 	for msg := range c.send {
