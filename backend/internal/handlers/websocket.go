@@ -1,53 +1,84 @@
 package handlers
 
 import (
-	"net/http"
-	"log"
-	"encoding/json"
-	"backend/internal/db"
-	"backend/internal/model"
 	"backend/internal/auth"
-	
+	"backend/internal/model"
+	"backend/internal/db"
+	"database/sql"
+	"encoding/json"
+	"log"
+	"net/http"
+	"strconv"
+	"strings"
+
 	"github.com/gorilla/websocket"
 )
 
 type Client struct {
-	conn *websocket.Conn
-	send chan []model.Message
+	conn   *websocket.Conn
+	send   chan []byte
+	msgDB  *sql.DB
+	userID string
+	roomID int
 }
 
 var (
 	clients   = make(map[*Client]bool)
-	broadcast = make(chan []model.Message)
+	broadcast = make(chan []byte)
 	upgrader  = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
 )
 
-func (h *Handler) handleWebsocker(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleWebSockets(w http.ResponseWriter, r *http.Request) {
 	// auth user
-	
-	_,err:=auth.VerifyToken(token)
-    // parse room_id
-    // upgrade
-    // create Client with DB
-    
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "missing authorization header", http.StatusUnauthorized)
+		return
+	}
+
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		http.Error(w, "invalid authorization format", http.StatusUnauthorized)
+		return
+	}
+
+	tokenString := parts[1]
+	claims, err := auth.VerifyToken(tokenString)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Token expired or invalid", http.StatusUnauthorized)
+		return
+	}
+	// parse room_id
+	roomIDStr := r.URL.Query().Get("room_id")
+	roomID, err := strconv.Atoi(roomIDStr)
+	if err != nil {
+		http.Error(w, "invalid room id", http.StatusBadRequest)
+		return
+	}
+	// upgrade
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
+	// create Client with DB
 
 	client := &Client{
-		conn: conn,
-		send: make(chan []model.Message),
+		conn:   conn,
+		send:   make(chan []byte),
+		msgDB:  h.MsgDB,
+		userID: claims.UserID,
+		roomID: roomID,
 	}
 
 	clients[client] = true
 
 	go client.read()
 	go client.write()
-	
+
 }
 
 func (c *Client) read() {
@@ -62,17 +93,16 @@ func (c *Client) read() {
 			return
 		}
 		var currMessage model.Message
-		err=json.Unmarshal(msg,&currMessage)
-		if err!=nil{
+		err = json.Unmarshal(msg, &currMessage)
+		if err != nil {
 			log.Println(err)
 			return
 		}
-		// db.AddMsg(h.)
+		currMessage.UserID=c.userID
+		err = db.AddMsg(c.msgDB, currMessage)
 		broadcast <- msg
 	}
 }
-
-
 
 func (c *Client) write() {
 

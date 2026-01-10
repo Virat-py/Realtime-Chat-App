@@ -17,7 +17,7 @@ func main() {
 	if err := db.CreateUserTable(userDatabase); err != nil {
 		log.Fatal("failed to create users table:", err)
 	}
-	
+
 	msgDatabase, err := db.ConnectUserDB()
 	if err != nil {
 		log.Println(err)
@@ -33,18 +33,17 @@ func main() {
 
 	h := &handlers.Handler{
 		UserDB: userDatabase,
-		MsgDB: msgDatabase,
+		MsgDB:  msgDatabase,
 	}
 
 	http.HandleFunc("/register", h.RegisterUser)
 	http.HandleFunc("/login", h.LoginUser)
-	
+
 	http.HandleFunc("/get_rooms", h.GetAllRoomsHandler)
 	http.HandleFunc("/room/", h.GetRoomData)
-	
-	http.HandleFunc("/ws", h.HandleWebSocket)
+
+	http.HandleFunc("/ws", h.HandleWebSockets)
 
 	log.Println("Server running on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
-

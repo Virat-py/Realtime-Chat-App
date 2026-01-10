@@ -23,7 +23,7 @@ func ConnectMsgDB() *sql.DB {
 func CreateMsgTable(db *sql.DB) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS messages (
-			ID INTEGER PRIMARY KEY AUTO INCREMENT,
+			ID INTEGER PRIMARY KEY AUTOINCREMENT,
 			UserID TEXT NOT NULL,
 			RoomID INT NOT NULL,
 			RoomName TEXT NOT NULL,
