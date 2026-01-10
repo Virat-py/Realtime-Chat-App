@@ -26,6 +26,7 @@ func CreateMsgTable(db *sql.DB) error {
 			ID INTEGER PRIMARY KEY AUTO INCREMENT,
 			UserID TEXT NOT NULL,
 			RoomID INT NOT NULL,
+			RoomName TEXT NOT NULL,
 			Message TEXT NOT NULL,
 			Time TEXT NOT NULL
 		);
@@ -39,38 +40,73 @@ func CreateMsgTable(db *sql.DB) error {
 
 func AddMsg(db *sql.DB, msg model.Message) error {
 
-	query := "INSERT INTO messages (UserID,RoomID,Message,Time) VALUES (?,?,?,?)"
+	query := "INSERT INTO messages (UserID,RoomID,RoomName,Message,Time) VALUES (?,?,?,?,?)"
 
-	_, err := db.Exec(query, msg.UserID, msg.RoomID, msg.Message, msg.Time)
+	_, err := db.Exec(query, msg.UserID, msg.RoomID, msg.RoomName, msg.Message, msg.Time)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func GetMsg(db *sql.DB, RoomID int) ([]model.Message,error){
-	query:="SELECT UserID,RoomID,Message,Time FROM messages WHERE RoomID=? ORDER BY ID DESC"
-	
-	rows,err:=db.Query(query,RoomID)
-	if err!=nil{
-		return nil,err
+func GetMsgOfRoom(db *sql.DB, RoomID int) ([]model.Message, error) {
+
+	query := "SELECT UserID,RoomID,Message,Time FROM messages WHERE RoomID=? ORDER BY ID ASC"
+
+	rows, err := db.Query(query, RoomID)
+	if err != nil {
+		return nil, err
 	}
-	
-	defer rows.Close() 
-	
+
+	defer rows.Close()
+
 	var messages []model.Message
-	
-	for rows.Next(){
+
+	for rows.Next() {
 		var msg model.Message
-		err:=rows.Scan(&msg.UserID,&msg.RoomID,&msg.Message,&msg.Time)
-		if err!=nil{
-			return nil,err
+		err := rows.Scan(&msg.UserID, &msg.RoomID, &msg.Message, &msg.Time)
+		if err != nil {
+			return nil, err
 		}
-		messages=append(messages,msg)
+		messages = append(messages, msg)
 	}
-	
-	if err:=rows.Err();err!=nil{
-		return nil,err
+
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
-	return messages,nil
+	return messages, nil
+}
+
+
+func GetRooms(db *sql.DB) ([]model.Room, error) {
+
+	query := `
+	SELECT RoomID, RoomName
+	FROM messages
+	GROUP BY RoomID, RoomName
+	ORDER BY MIN(ID) ASC;
+	`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var rooms []model.Room
+
+	for rows.Next() {
+		var room model.Room
+		err := rows.Scan(&room.RoomID,&room.RoomName)
+		if err != nil {
+			return nil, err
+		}
+		rooms = append(rooms, room)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return rooms, nil
 }

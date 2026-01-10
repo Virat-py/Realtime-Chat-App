@@ -3,15 +3,16 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"net/http"
 	"log"
+	"net/http"
 
 	"backend/internal/auth"
 	"backend/internal/db"
 )
 
 type Handler struct {
-	DB *sql.DB
+	UserDB    *sql.DB
+	MsgDB    *sql.DB
 }
 
 func (h *Handler) RegisterUser(w http.ResponseWriter, r *http.Request) {
@@ -31,14 +32,14 @@ func (h *Handler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check if user already exists
-	userAlreadyExists, err := db.CheckUserExists(h.DB, credentials.UserID)
+	userAlreadyExists, err := db.CheckUserExists(h.UserDB, credentials.UserID)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	if userAlreadyExists == true {
-		log.Printf("UserID:%v already exists",credentials.UserID)
+		log.Printf("UserID:%v already exists", credentials.UserID)
 		http.Error(w, "UserID Already Exists", http.StatusBadRequest)
 		return
 	}
@@ -49,8 +50,8 @@ func (h *Handler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	// store creds in DB
-	err = db.AddUser(h.DB, credentials.UserID, passwordHash)
+	// store creds in UserDB
+	err = db.AddUser(h.UserDB, credentials.UserID, passwordHash)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -62,14 +63,14 @@ func (h *Handler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	
+
 	json.NewEncoder(w).Encode(map[string]string{
-			"token": token,
+		"token": token,
 	})
-	
+
 }
 
 func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
@@ -88,7 +89,7 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check if user already exists
-	userAlreadyExists, err := db.CheckUserExists(h.DB, credentials.UserID)
+	userAlreadyExists, err := db.CheckUserExists(h.UserDB, credentials.UserID)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -98,17 +99,17 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid Credentials", http.StatusBadRequest)
 		return
 	}
-	
-	// find hash of userID in DB and check if its correct
-	userHash,err:=db.GetUserHash(h.DB,credentials.UserID)
+
+	// find hash of userID in UserDB and check if its correct
+	userHash, err := db.GetUserHash(h.UserDB, credentials.UserID)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	
-	passwordCorrect:=auth.CheckPasswordHash(credentials.Password,userHash)
-	if passwordCorrect!=true{
+
+	passwordCorrect := auth.CheckPasswordHash(credentials.Password, userHash)
+	if passwordCorrect != true {
 		http.Error(w, "Invalid Credentials", http.StatusUnauthorized)
 		return
 	}
@@ -119,12 +120,12 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	
+
 	json.NewEncoder(w).Encode(map[string]string{
-			"token": token,
+		"token": token,
 	})
-	
+
 }
