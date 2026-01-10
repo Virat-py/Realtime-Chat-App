@@ -59,8 +59,9 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 
 	clients[client] = true
 
-	go client.write()
 	go client.read()
+	go client.write()
+	
 }
 
 func (c *Client) read() {
