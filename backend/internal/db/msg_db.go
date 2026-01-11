@@ -3,21 +3,20 @@ package db
 import (
 	"backend/internal/model"
 	"database/sql"
-	"log"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func ConnectMsgDB() *sql.DB {
+func ConnectMsgDB() (*sql.DB,error) {
 	db, err := sql.Open("sqlite3", "./app.db")
 	if err != nil {
-		log.Fatal(err)
+		return nil,err
 	}
 
 	if err := db.Ping(); err != nil {
-		log.Fatal(err)
+		return nil,err
 	}
-	return db
+	return db,nil
 }
 
 func CreateMsgTable(db *sql.DB) error {

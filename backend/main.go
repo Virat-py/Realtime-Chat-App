@@ -18,7 +18,7 @@ func main() {
 		log.Fatal("failed to create users table:", err)
 	}
 
-	msgDatabase, err := db.ConnectUserDB()
+	msgDatabase, err := db.ConnectMsgDB()
 	if err != nil {
 		log.Println(err)
 		return
@@ -27,18 +27,31 @@ func main() {
 	if err := db.CreateMsgTable(msgDatabase); err != nil {
 		log.Fatal("failed to create messages table:", err)
 	}
+	
+	roomDatabase, err := db.ConnectRoomDB()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	if err := db.CreateRoomTable(msgDatabase); err != nil {
+		log.Fatal("failed to create messages table:", err)
+	}
 
 	defer userDatabase.Close()
 	defer msgDatabase.Close()
+	defer roomDatabase.Close()
 
 	h := &handlers.Handler{
 		UserDB: userDatabase,
 		MsgDB:  msgDatabase,
+		RoomDB: roomDatabase,
 	}
 
 	http.HandleFunc("/register", h.RegisterUser)
 	http.HandleFunc("/login", h.LoginUser)
 
+	http.HandleFunc("/create_room",h.CreateRoom)
 	http.HandleFunc("/get_rooms", h.GetAllRoomsHandler)
 	http.HandleFunc("/room/", h.GetRoomData)
 

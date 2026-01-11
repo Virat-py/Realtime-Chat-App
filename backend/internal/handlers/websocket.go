@@ -2,29 +2,35 @@ package handlers
 
 import (
 	"backend/internal/auth"
-	"backend/internal/model"
 	"backend/internal/db"
+	"backend/internal/model"
 	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
 
 type Client struct {
 	conn   *websocket.Conn
-	send   chan []byte
+	send   chan model.Message
 	msgDB  *sql.DB
+	roomDB *sql.DB
 	userID string
 	roomID int
 }
 
+type incomingMsg struct {
+	Message string `json:"message"`
+}
+
 var (
 	clients   = make(map[*Client]bool)
-	broadcast = make(chan []byte)
+	broadcast = make(chan model.Message)
 	upgrader  = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
@@ -68,8 +74,9 @@ func (h *Handler) HandleWebSockets(w http.ResponseWriter, r *http.Request) {
 
 	client := &Client{
 		conn:   conn,
-		send:   make(chan []byte),
+		send:   make(chan model.Message),
 		msgDB:  h.MsgDB,
+		roomDB: h.RoomDB,
 		userID: claims.UserID,
 		roomID: roomID,
 	}
@@ -92,15 +99,32 @@ func (c *Client) read() {
 		if err != nil {
 			return
 		}
-		var currMessage model.Message
-		err = json.Unmarshal(msg, &currMessage)
+
+		var currMsgTextJSON incomingMsg
+		err = json.Unmarshal(msg, &currMsgTextJSON)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		currMessage.UserID=c.userID
+		currMsgText:=currMsgTextJSON.Message
+		// don't trust client send fields
+		
+		var currMessage model.Message
+		currMessage.Message=currMsgText
+		currMessage.UserID = c.userID
+		currMessage.RoomID = c.roomID
+		ist := time.FixedZone("IST", 5*60*60+30*60) // +5 hours 30 minutes
+		nowIST := time.Now().In(ist)
+		currMessage.Time = nowIST.Format(time.DateTime)
+		roomName,err:=db.GetRoomName(c.roomDB,c.roomID)
+		currMessage.RoomName=roomName
+
 		err = db.AddMsg(c.msgDB, currMessage)
-		broadcast <- msg
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		broadcast <- currMessage
 	}
 }
 
@@ -108,8 +132,9 @@ func (c *Client) write() {
 
 	defer c.conn.Close()
 
-	for msg := range c.send {
-		err := c.conn.WriteMessage(websocket.TextMessage, msg)
+	for currMessage := range c.send {
+		data, err := json.Marshal(currMessage)
+		err = c.conn.WriteMessage(websocket.TextMessage, data)
 		if err != nil {
 			return
 		}

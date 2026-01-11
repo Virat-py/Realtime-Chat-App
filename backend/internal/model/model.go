@@ -13,8 +13,7 @@ type Message struct {
 	Time     string `json:"time"`
 }
 
-
 type Room struct{
-	RoomID int
-	RoomName string
+	RoomID int	`json:"room_id"`
+	RoomName string `json:"room_name"`
 }

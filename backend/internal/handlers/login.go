@@ -13,6 +13,7 @@ import (
 type Handler struct {
 	UserDB    *sql.DB
 	MsgDB    *sql.DB
+	RoomDB    *sql.DB
 }
 
 func (h *Handler) RegisterUser(w http.ResponseWriter, r *http.Request) {
