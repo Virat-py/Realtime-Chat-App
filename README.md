@@ -2,7 +2,7 @@
 
 Realtime chat app using websockets
 
-**Frontend:** To be Decided
+**Frontend:** Svelte
 
 **Backend:** Go (net/http and gorilla/websocket)
 
