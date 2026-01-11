@@ -10,18 +10,19 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
 
 type Client struct {
-	conn   *websocket.Conn
-	send   chan model.Message
-	msgDB  *sql.DB
-	roomDB *sql.DB
-	userID string
-	roomID int
+	conn     *websocket.Conn
+	send     chan model.Message
+	DB       *sql.DB
+	userID   string
+	roomID   int
+	roomName string
 }
 
 type incomingMsg struct {
@@ -29,12 +30,38 @@ type incomingMsg struct {
 }
 
 var (
-	clients   = make(map[*Client]bool)
-	broadcast = make(chan model.Message)
-	upgrader  = websocket.Upgrader{
+	clients      = make(map[*Client]bool)
+	broadcast    = make(chan model.Message)
+	roomToClient = make(map[int][]*Client)
+
+	clientsMu sync.Mutex
+	roomsMu   sync.Mutex
+
+	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
 )
+
+func RemoveClientFromRoom(roomID int, clientToRemove *Client) {
+
+	roomsMu.Lock()
+	defer roomsMu.Unlock()
+
+	clients_in_room, exists := roomToClient[roomID]
+	if !exists {
+		return // room doesn't exist
+	}
+
+	// Find and remove the client
+	for i, c := range clients_in_room {
+		if c == clientToRemove { // compare pointers
+			// Remove by slicing
+			roomToClient[roomID] = append(clients_in_room[:i], clients_in_room[i+1:]...)
+			return
+		}
+	}
+	// client not found in this room → nothing to do
+}
 
 func (h *Handler) HandleWebSockets(w http.ResponseWriter, r *http.Request) {
 	// auth user
@@ -71,17 +98,30 @@ func (h *Handler) HandleWebSockets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// create Client with DB
+	//
+	roomName, err := db.GetRoomName(h.DB, roomID)
 
-	client := &Client{
-		conn:   conn,
-		send:   make(chan model.Message),
-		msgDB:  h.MsgDB,
-		roomDB: h.RoomDB,
-		userID: claims.UserID,
-		roomID: roomID,
+	if err != nil {
+		log.Println(err)
+		return
 	}
 
+	client := &Client{
+		conn:     conn,
+		send:     make(chan model.Message),
+		DB:       h.DB,
+		userID:   claims.UserID,
+		roomID:   roomID,
+		roomName: roomName,
+	}
+
+	clientsMu.Lock()
 	clients[client] = true
+	clientsMu.Unlock()
+
+	roomsMu.Lock()
+	roomToClient[roomID] = append(roomToClient[roomID], client)
+	roomsMu.Unlock()
 
 	go client.read()
 	go client.write()
@@ -90,7 +130,13 @@ func (h *Handler) HandleWebSockets(w http.ResponseWriter, r *http.Request) {
 
 func (c *Client) read() {
 	defer func() {
+
+		clientsMu.Lock()
 		delete(clients, c)
+		clientsMu.Unlock()
+
+		RemoveClientFromRoom(c.roomID, c)
+
 		c.conn.Close()
 	}()
 
@@ -106,20 +152,19 @@ func (c *Client) read() {
 			log.Println(err)
 			return
 		}
-		currMsgText:=currMsgTextJSON.Message
+		currMsgText := currMsgTextJSON.Message
 		// don't trust client send fields
-		
+
 		var currMessage model.Message
-		currMessage.Message=currMsgText
+		currMessage.Message = currMsgText
 		currMessage.UserID = c.userID
 		currMessage.RoomID = c.roomID
 		ist := time.FixedZone("IST", 5*60*60+30*60) // +5 hours 30 minutes
 		nowIST := time.Now().In(ist)
 		currMessage.Time = nowIST.Format(time.DateTime)
-		roomName,err:=db.GetRoomName(c.roomDB,c.roomID)
-		currMessage.RoomName=roomName
+		currMessage.RoomName = c.roomName
 
-		err = db.AddMsg(c.msgDB, currMessage)
+		err = db.AddMsg(c.DB, currMessage)
 		if err != nil {
 			log.Println(err)
 			return
@@ -141,10 +186,11 @@ func (c *Client) write() {
 	}
 }
 
-func handleBroadcast() {
+func HandleBroadcast() {
 	for {
 		msg := <-broadcast
-		for client := range clients {
+
+		for _, client := range roomToClient[msg.RoomID] {
 			select {
 			case client.send <- msg:
 			default:

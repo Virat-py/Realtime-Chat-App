@@ -7,18 +7,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func ConnectMsgDB() (*sql.DB,error) {
-	db, err := sql.Open("sqlite3", "./app.db")
-	if err != nil {
-		return nil,err
-	}
-
-	if err := db.Ping(); err != nil {
-		return nil,err
-	}
-	return db,nil
-}
-
 func CreateMsgTable(db *sql.DB) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS messages (
@@ -77,35 +65,3 @@ func GetMsgOfRoom(db *sql.DB, RoomID int) ([]model.Message, error) {
 }
 
 
-func GetRooms(db *sql.DB) ([]model.Room, error) {
-
-	query := `
-	SELECT RoomID, RoomName
-	FROM messages
-	GROUP BY RoomID, RoomName
-	ORDER BY MIN(ID) ASC;
-	`
-
-	rows, err := db.Query(query)
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	var rooms []model.Room
-
-	for rows.Next() {
-		var room model.Room
-		err := rows.Scan(&room.RoomID,&room.RoomName)
-		if err != nil {
-			return nil, err
-		}
-		rooms = append(rooms, room)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return rooms, nil
-}

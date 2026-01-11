@@ -1,28 +1,16 @@
 package db
 
 import (
-	// "backend/internal/model"
+	"backend/internal/model"
 	"database/sql"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func ConnectRoomDB() (*sql.DB,error) {
-	db, err := sql.Open("sqlite3", "./app.db")
-	if err != nil {
-		return nil,err
-	}
-
-	if err := db.Ping(); err != nil {
-		return nil,err
-	}
-	return db,nil
-}
-
 func CreateRoomTable(db *sql.DB) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS rooms (
-			RoomID int PRIMARY KEY AUTOINCREMENT,
+			RoomID INTEGER PRIMARY KEY AUTOINCREMENT,
 			RoomName TEXT NOT NULL
 		);
 		`
@@ -34,7 +22,7 @@ func CreateRoomTable(db *sql.DB) error {
 }
 
 func AddRoom(db *sql.DB, RoomName string) (error){
-	query:="INSERT INTO rooms VALUES RoomName=?"
+	query:="INSERT INTO rooms (RoomName) VALUES (?)"
 	_,err:=db.Exec(query,RoomName)
 	if err!=nil{
 		return err
@@ -60,4 +48,36 @@ func GetRoomName(db *sql.DB, RoomID int) (string,error){
 		return "",err
 	}
 	return RoomName,nil
+}
+
+func GetRooms(db *sql.DB) ([]model.Room, error) {
+
+	query := `
+	SELECT RoomID, RoomName
+	FROM rooms
+	ORDER BY RoomID ASC;
+	`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var rooms []model.Room
+
+	for rows.Next() {
+		var room model.Room
+		err := rows.Scan(&room.RoomID,&room.RoomName)
+		if err != nil {
+			return nil, err
+		}
+		rooms = append(rooms, room)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return rooms, nil
 }

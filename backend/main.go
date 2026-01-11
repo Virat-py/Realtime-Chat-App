@@ -8,45 +8,31 @@ import (
 )
 
 func main() {
-	userDatabase, err := db.ConnectUserDB()
+	Database, err := db.ConnectDB()
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	if err := db.CreateUserTable(userDatabase); err != nil {
+	if err := db.CreateUserTable(Database); err != nil {
 		log.Fatal("failed to create users table:", err)
 	}
 
-	msgDatabase, err := db.ConnectMsgDB()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	if err := db.CreateMsgTable(msgDatabase); err != nil {
+	if err := db.CreateMsgTable(Database); err != nil {
 		log.Fatal("failed to create messages table:", err)
 	}
 	
-	roomDatabase, err := db.ConnectRoomDB()
-	if err != nil {
-		log.Println(err)
-		return
+	if err := db.CreateRoomTable(Database); err != nil {
+		log.Fatal("failed to create room table:", err)
 	}
 
-	if err := db.CreateRoomTable(msgDatabase); err != nil {
-		log.Fatal("failed to create messages table:", err)
-	}
-
-	defer userDatabase.Close()
-	defer msgDatabase.Close()
-	defer roomDatabase.Close()
+	defer Database.Close()
 
 	h := &handlers.Handler{
-		UserDB: userDatabase,
-		MsgDB:  msgDatabase,
-		RoomDB: roomDatabase,
+		DB:Database,
 	}
+	
+	go handlers.HandleBroadcast()
 
 	http.HandleFunc("/register", h.RegisterUser)
 	http.HandleFunc("/login", h.LoginUser)

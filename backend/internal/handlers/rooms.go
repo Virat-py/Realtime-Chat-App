@@ -50,7 +50,7 @@ func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	err=db.AddRoom(h.RoomDB,roomName.RoomName)
+	err=db.AddRoom(h.DB,roomName.RoomName)
 	
 	if err!=nil{
 		log.Println(err)
@@ -91,7 +91,7 @@ func (h *Handler) GetAllRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// get all rooms
-	allRooms, err := db.GetRooms(h.MsgDB)
+	allRooms, err := db.GetRooms(h.DB)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -145,7 +145,11 @@ func (h *Handler) GetRoomData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	allMessages, err := db.GetMsgOfRoom(h.MsgDB, roomID)
+	allMessages, err := db.GetMsgOfRoom(h.DB, roomID)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
