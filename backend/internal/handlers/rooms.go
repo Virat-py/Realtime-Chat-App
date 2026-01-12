@@ -19,20 +19,15 @@ func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// auth user
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		http.Error(w, "missing authorization header", http.StatusUnauthorized)
+	cookie, err := r.Cookie("access_token")
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		http.Error(w, "invalid authorization format", http.StatusUnauthorized)
-		return
-	}
+	jwtString := cookie.Value
 
-	tokenString := parts[1]
-	_, err := auth.VerifyToken(tokenString)
+	_, err = auth.VerifyToken(jwtString)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Token expired or invalid", http.StatusUnauthorized)
@@ -41,7 +36,7 @@ func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request) {
 
 	// create new room
 	var roomName struct {
-		RoomName   string `json:"room_name"`
+		RoomName string `json:"room_name"`
 	}
 	err = json.NewDecoder(r.Body).Decode(&roomName)
 	if err != nil {
@@ -49,10 +44,10 @@ func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid Request Body", http.StatusBadRequest)
 		return
 	}
-	
-	err=db.AddRoom(h.DB,roomName.RoomName)
-	
-	if err!=nil{
+
+	err = db.AddRoom(h.DB, roomName.RoomName)
+
+	if err != nil {
 		log.Println(err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -70,20 +65,15 @@ func (h *Handler) GetAllRoomsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// auth user
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		http.Error(w, "missing authorization header", http.StatusUnauthorized)
+	cookie, err := r.Cookie("access_token")
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		http.Error(w, "invalid authorization format", http.StatusUnauthorized)
-		return
-	}
+	jwtString := cookie.Value
 
-	tokenString := parts[1]
-	_, err := auth.VerifyToken(tokenString)
+	_, err = auth.VerifyToken(jwtString)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Token expired or invalid", http.StatusUnauthorized)
@@ -113,20 +103,15 @@ func (h *Handler) GetRoomData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// auth user
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		http.Error(w, "missing authorization header", http.StatusUnauthorized)
+	cookie, err := r.Cookie("access_token")
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		http.Error(w, "invalid authorization format", http.StatusUnauthorized)
-		return
-	}
+	jwtString := cookie.Value
 
-	tokenString := parts[1]
-	_, err := auth.VerifyToken(tokenString)
+	_, err = auth.VerifyToken(jwtString)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Token expired or invalid", http.StatusUnauthorized)

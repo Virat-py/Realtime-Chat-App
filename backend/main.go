@@ -48,23 +48,18 @@ func main() {
 }
 
 func enableCORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+        w.Header().Set("Access-Control-Allow-Credentials", "true")
+        w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 
-		// Allow your frontend origin
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+        if r.Method == http.MethodOptions {
+            w.WriteHeader(http.StatusOK)
+            return
+        }
 
-		// Allow headers your frontend sends
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-		// Allow methods your frontend uses
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-
-		// Handle preflight (VERY IMPORTANT)
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
+        next.ServeHTTP(w, r)
+    })
 }
+

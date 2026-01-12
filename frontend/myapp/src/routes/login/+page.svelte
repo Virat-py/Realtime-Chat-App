@@ -1,5 +1,5 @@
 <script>
-    import { goto } from '$app/navigation';
+    import { goto } from "$app/navigation";
 
     let name = "";
     let password = "";
@@ -8,6 +8,7 @@
     async function register_user() {
         const res = await fetch("http://localhost:8080/register", {
             method: "POST",
+            credentials: "include",
             headers: {
                 "Content-Type": "application/json",
             },
@@ -17,17 +18,15 @@
             }),
         });
 
-        if (res.ok){
-          const data = await res.json()
-          token = data.token;
-          localStorage.setItem('token', token);
-          redirect_user()
+        if (res.ok) {
+            redirect_user();
         }
     }
 
     async function login_user() {
         const res = await fetch("http://localhost:8080/login", {
             method: "POST",
+            credentials: "include",
             headers: {
                 "Content-Type": "application/json",
             },
@@ -36,18 +35,15 @@
                 Password: password,
             }),
         });
-        console.log(res)
-        
-        if (res.ok){
-          const data = await res.json()
-          token = data.token;
-          localStorage.setItem('token', token);
-          redirect_user()
+        console.log(res);
+
+        if (res.ok) {
+            redirect_user();
         }
     }
 
-    function redirect_user(){
-      goto("/rooms")
+    function redirect_user() {
+        goto("/rooms");
     }
 </script>
 

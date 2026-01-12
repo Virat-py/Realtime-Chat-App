@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -65,20 +64,15 @@ func RemoveClientFromRoom(roomID int, clientToRemove *Client) {
 
 func (h *Handler) HandleWebSockets(w http.ResponseWriter, r *http.Request) {
 	// auth user
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		http.Error(w, "missing authorization header", http.StatusUnauthorized)
-		return
-	}
+	cookie, err := r.Cookie("access_token")
+    if err != nil {
+        http.Error(w, "unauthorized", http.StatusUnauthorized)
+        return
+    }
 
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		http.Error(w, "invalid authorization format", http.StatusUnauthorized)
-		return
-	}
-
-	tokenString := parts[1]
-	claims, err := auth.VerifyToken(tokenString)
+    jwtString := cookie.Value
+    
+	claims, err := auth.VerifyToken(jwtString)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Token expired or invalid", http.StatusUnauthorized)
