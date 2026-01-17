@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
+	"fmt"
 	"net/http"
 	"strconv"
 	"sync"
@@ -99,6 +100,8 @@ func (h *Handler) HandleWebSockets(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
+	
+	fmt.Println(claims.UserID)
 
 	client := &Client{
 		conn:     conn,

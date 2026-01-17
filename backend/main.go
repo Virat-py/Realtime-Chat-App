@@ -40,6 +40,7 @@ func main() {
 	http.HandleFunc("/create_room",h.CreateRoom)
 	http.HandleFunc("/get_rooms", h.GetAllRoomsHandler)
 	http.HandleFunc("/room/", h.GetRoomData)
+	http.HandleFunc("/get_userid",h.GetUserID)
 
 	http.HandleFunc("/ws", h.HandleWebSockets)
 

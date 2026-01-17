@@ -71,6 +71,15 @@ func (h *Handler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	})
+	
+	http.SetCookie(w, &http.Cookie{
+		Name:     "user_id",
+		Value:    credentials.UserID,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -133,8 +142,43 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	})
+	
+	http.SetCookie(w, &http.Cookie{
+		Name:     "user_id",
+		Value:    credentials.UserID,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+
+}
+
+func (h *Handler) GetUserID(w http.ResponseWriter, r *http.Request) {
+	// check if request is GET
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// auth user
+	cookie, err := r.Cookie("user_id")
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	currUserID := cookie.Value
+	
+	sendID:=make(map[string] string)
+	sendID["user_id"]=currUserID
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	json.NewEncoder(w).Encode(sendID)
 
 }
