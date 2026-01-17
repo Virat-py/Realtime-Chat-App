@@ -8,6 +8,6 @@ Realtime chat app using websockets
 
 **Database:** SQLite
 
-**User Authentication:** JWT 
+**User Authentication:** JWT with Cookies 
 
 **Password Hashing:** bcrypt
